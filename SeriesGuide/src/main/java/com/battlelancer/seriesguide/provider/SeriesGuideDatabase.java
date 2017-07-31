@@ -1320,6 +1320,7 @@ public class SeriesGuideDatabase extends SQLiteOpenHelper {
     @Nullable
     public static Cursor search(String selection, String[] selectionArgs, SQLiteDatabase db) {
         StringBuilder query = new StringBuilder(QUERY_SEARCH_EPISODES);
+
         if (selection != null) {
             query.append(" WHERE (").append(selection).append(")");
         }
@@ -1330,11 +1331,26 @@ public class SeriesGuideDatabase extends SQLiteOpenHelper {
         if (searchTerm != null) {
             searchTerm = searchTerm.replace("\"", "");
         }
-        // search for anything starting with the given search term
-        selectionArgs[0] = "\"" + searchTerm + "*\"";
+
+        // search for anything starting with the given search term(s)
+        if (searchTerm.contains(" ")) {
+            String[] arr = searchTerm.split(" ");
+            int size = arr.length;
+            String line = "\"";
+            for (int i = 0; i < size; i++) {
+                line += arr[i] + "*";
+                if(i != size - 1){
+                    line += " ";
+                }
+            }
+            line += "\"";
+            selectionArgs[0] = line;
+        } else {
+            selectionArgs[0] = "\"" + searchTerm + "*\"";
+        }
 
         try {
-            return db.rawQuery(query.toString(), selectionArgs);
+            return db.rawQuery(query.toString(),selectionArgs);
         } catch (SQLiteException e) {
             Timber.e(e, "search: failed, database error.");
             return null;
@@ -1357,16 +1373,32 @@ public class SeriesGuideDatabase extends SQLiteOpenHelper {
 
     @Nullable
     public static Cursor getSuggestions(String searchTerm, SQLiteDatabase db) {
+        String[] selectionArgs = new String[1];
         // ensure to strip double quotation marks (would break the MATCH query)
         if (searchTerm != null) {
             searchTerm = searchTerm.replace("\"", "");
         }
 
+        // search for anything starting with the given search term(s)
+        if (searchTerm.contains(" ")) {
+            String[] arr = searchTerm.split(" ");
+            int size = arr.length;
+            String line = "\"";
+            for (int i = 0; i < size; i++) {
+                line += arr[i] + "*";
+                if(i != size - 1){
+                    line += " ";
+                }
+            }
+            line += "\"";
+            selectionArgs[0] = line;
+        } else {
+            selectionArgs[0] = "\"" + searchTerm + "*\"";
+        }
+
         try {
             // search for anything starting with the given search term
-            return db.rawQuery(QUERY_SEARCH_SHOWS, new String[] {
-                    "\"" + searchTerm + "*\""
-            });
+            return db.rawQuery(QUERY_SEARCH_SHOWS, selectionArgs);
         } catch (SQLiteException e) {
             Timber.e(e, "getSuggestions: failed, database error.");
             return null;
